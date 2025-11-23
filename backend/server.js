@@ -1,20 +1,16 @@
-const { body, validationResult } = require('express-validator');
+require('dotenv').config();
+const express = require('express');
+const cors = require('cors');
+const sqlite3 = require('sqlite3').verbose();
 const multer = require('multer');
 const csv = require('csv-parser');
 const fs = require('fs');
 const upload = multer({ dest: 'uploads/' });
 
-require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
-const sqlite3 = require('sqlite3').verbose();
-app.use(express.json());
-
-
 const app = express();
 const PORT = process.env.PORT || 5001;
 
-// Middlewares
+// Middleware
 app.use(cors());
 app.use(express.json());
 
@@ -44,12 +40,12 @@ db.serialize(() => {
   )`);
 });
 
-// Backend root
+// Root
 app.get('/', (req, res) => {
   res.send('Inventory Management Backend Running!');
 });
 
-// Get unique categories for category dropdown
+// Categories
 app.get('/api/categories', (req, res) => {
   db.all('SELECT DISTINCT category FROM products WHERE category IS NOT NULL AND category != ""', [], (err, rows) => {
     if (err) return res.status(500).json({ error: 'Failed to fetch categories' });
@@ -58,7 +54,7 @@ app.get('/api/categories', (req, res) => {
   });
 });
 
-// Get all products (with category filter, pagination, and sorting)
+// Products (list, paginated, sorted, filtered)
 app.get('/api/products', (req, res) => {
   const { category, page = 1, pageSize = 10, sort = 'name', order = 'ASC' } = req.query;
 
@@ -71,7 +67,6 @@ app.get('/api/products', (req, res) => {
     params.push(category);
   }
 
-  // Allow only valid sort fields
   const validSortFields = ['name', 'stock', 'category', 'id', 'brand', 'unit', 'status'];
   const sortField = validSortFields.includes(sort.toLowerCase()) ? sort : 'name';
   const sortOrder = order && order.toUpperCase() === 'DESC' ? 'DESC' : 'ASC';
@@ -88,18 +83,33 @@ app.get('/api/products', (req, res) => {
   });
 });
 
-// Add a new product AND log initial history
+// Add a new product and log history
 app.post('/api/products', (req, res) => {
   const { name, unit, category, brand, stock, status, image } = req.body;
+  if (!name || stock === undefined || stock === "") {
+    return res.status(400).json({ error: 'Name and stock are required.' });
+  }
+  const stockInt = parseInt(stock);
+  if (isNaN(stockInt)) {
+    return res.status(400).json({ error: 'Stock must be a number.' });
+  }
+
   db.run(
     'INSERT INTO products (name, unit, category, brand, stock, status, image) VALUES (?, ?, ?, ?, ?, ?, ?)',
-    [name, unit, category, brand, stock, status, image],
+    [name, unit, category, brand, stockInt, status, image],
     function (err) {
-      if (err) return res.status(500).json({ error: 'Failed to add product' });
+      if (err) {
+        console.error('DB Insert Error:', err);
+        return res.status(500).json({ error: `Failed to add product: ${err.message}` });
+      }
       db.run(
         'INSERT INTO inventory_history (product_id, change, previous_stock, new_stock, note) VALUES (?, ?, ?, ?, ?)',
-        [this.lastID, stock, 0, stock, 'Initial add'],
-        function () {
+        [this.lastID, stockInt, 0, stockInt, 'Initial add'],
+        function (err2) {
+          if (err2) {
+            console.error('Inventory History Insert Error:', err2);
+            return res.status(500).json({ error: `Failed to log inventory history: ${err2.message}` });
+          }
           res.json({ success: true, newId: this.lastID });
         }
       );
@@ -107,22 +117,23 @@ app.post('/api/products', (req, res) => {
   );
 });
 
-// Update product details and track inventory history
+// Update product and track history
 app.put('/api/products/:id', (req, res) => {
   const { name, unit, category, brand, stock, status, image } = req.body;
   const { id } = req.params;
   db.get('SELECT stock FROM products WHERE id = ?', [id], (err, row) => {
     if (err || !row) return res.status(404).json({ error: 'Product not found' });
     const previous_stock = row.stock;
+    const stockInt = parseInt(stock);
     db.run(
       'UPDATE products SET name = ?, unit = ?, category = ?, brand = ?, stock = ?, status = ?, image = ? WHERE id = ?',
-      [name, unit, category, brand, stock, status, image, id],
+      [name, unit, category, brand, stockInt, status, image, id],
       function (err2) {
         if (err2) return res.status(500).json({ error: 'Update failed' });
-        if (parseInt(stock) !== parseInt(previous_stock)) {
+        if (stockInt !== parseInt(previous_stock)) {
           db.run(
             'INSERT INTO inventory_history (product_id, change, previous_stock, new_stock, note) VALUES (?, ?, ?, ?, ?)',
-            [id, stock - previous_stock, previous_stock, stock, 'Stock update'],
+            [id, stockInt - previous_stock, previous_stock, stockInt, 'Stock update'],
             function () {
               res.json({ success: true });
             }
@@ -135,6 +146,8 @@ app.put('/api/products/:id', (req, res) => {
   });
 });
 
+// Import and export, history, and delete routes (same as before)...
+
 // Import products from CSV
 app.post('/api/products/import', upload.single('csvFile'), (req, res) => {
   if (!req.file) {
@@ -145,9 +158,7 @@ app.post('/api/products/import', upload.single('csvFile'), (req, res) => {
   const results = [];
   fs.createReadStream(req.file.path)
     .pipe(csv())
-    .on('data', (row) => {
-      results.push(row);
-    })
+    .on('data', (row) => { results.push(row); })
     .on('end', () => {
       let processed = 0;
       if (results.length === 0) {
@@ -197,7 +208,7 @@ app.get('/api/products/export', (req, res) => {
   });
 });
 
-// Get inventory history for a product, sorted by timestamp DESC
+// Inventory history
 app.get('/api/products/:id/history', (req, res) => {
   const { id } = req.params;
   db.all(
@@ -210,7 +221,7 @@ app.get('/api/products/:id/history', (req, res) => {
   );
 });
 
-// Delete a product
+// Delete product
 app.delete('/api/products/:id', (req, res) => {
   const { id } = req.params;
   db.run('DELETE FROM products WHERE id = ?', [id], function (err) {
@@ -220,37 +231,8 @@ app.delete('/api/products/:id', (req, res) => {
     res.json({ success: true, deletedId: id });
   });
 });
-app.get('/api/products', (req, res) => {
-  const { category, page = 1, pageSize = 10, sort = 'name', order = 'ASC' } = req.query;
-  
-  let sql = 'SELECT * FROM products';
-  let params = [];
 
-  if (category) {
-    sql += ' WHERE category = ?';
-    params.push(category);
-  }
-
-  const validSortFields = ['name', 'stock', 'category', 'id', 'brand', 'unit', 'status'];
-  const sortField = validSortFields.includes(sort.toLowerCase()) ? sort : 'name';
-  const sortOrder = order && order.toUpperCase() === 'DESC' ? 'DESC' : 'ASC';
-
-  const limit = Number(pageSize);
-  const offset = (Number(page) - 1) * limit;
-  sql += ` ORDER BY ${sortField} ${sortOrder} LIMIT ? OFFSET ?`;
-  params.push(limit, offset);
-
-  // DEBUG: print query and params
-  console.log("SQL:", sql);
-  console.log("Params:", params);
-
-  db.all(sql, params, (err, rows) => {
-    if (err) return res.status(500).json({ error: 'Database error', details: err });
-    res.json(rows);
-  });
-});
-
-// FINAL LINE: Start the server
+// Start server
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
