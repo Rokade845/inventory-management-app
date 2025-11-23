@@ -114,7 +114,7 @@ function AddProductForm({ onAdd }) {
   const handleSubmit = (e) => {
     e.preventDefault();
     const submitForm = { ...form, stock: Number(form.stock) };
-    fetch('http://localhost:5001/api/products', {
+    fetch('https://inventory-management-app-g7yl.onrender.com/api/products', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(submitForm)
