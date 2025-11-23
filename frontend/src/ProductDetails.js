@@ -6,7 +6,7 @@ function InventoryHistory({ productId }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`http://localhost:5001/api/products/${productId}/history`)
+    fetch(`https://inventory-management-app-g7yl.onrender.com/api/products/${productId}/history`)
       .then(response => response.json())
       .then(data => {
         setHistory(data);
@@ -55,7 +55,7 @@ export default function ProductDetails() {
   const productId = 1; // Only one product
 
   useEffect(() => {
-    fetch(`http://localhost:5001/api/products/${productId}`)
+    fetch(`https://inventory-management-app-g7yl.onrender.com/api/products/${productId}`)
       .then(res => res.json())
       .then(data => setProduct(data))
       .catch(() => setProduct(null));
