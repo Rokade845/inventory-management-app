@@ -113,7 +113,7 @@ function AddProductForm({ onAdd }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    fetch('http://localhost:5001/api/products', {
+    fetch('https://inventory-management-app-g7yl.onrender.com/api/products', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(form)
@@ -163,7 +163,7 @@ function InventoryHistory({ productId }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`http://localhost:5001/api/products/${productId}/history`)
+    fetch(`https://inventory-management-app-g7yl.onrender.com/api/products/${productId}/history`)
       .then(response => response.json())
       .then(data => {
         setHistory(data);
@@ -219,7 +219,7 @@ function ProductRow({ product, onEdit, onDelete, isEditing, setEditing }) {
   };
 
   const handleSave = () => {
-    fetch(`http://localhost:5001/api/products/${product.id}`, {
+    fetch(`https://inventory-management-app-g7yl.onrender.com/api/products/${product.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(form)
@@ -292,14 +292,14 @@ export default function ProductManager() {
   const [selectedForHistory, setSelectedForHistory] = useState(null);
 
   useEffect(() => {
-    fetch('http://localhost:5001/api/categories')
+    fetch('https://inventory-management-app-g7yl.onrender.com/api/categories')
       .then(res => res.json())
       .then(data => setCategories(data))
       .catch(() => setCategories([]));
   }, []);
 
   useEffect(() => {
-    let url = `http://localhost:5001/api/products?page=${page}&pageSize=${pageSize}&sort=${sort}&order=${order}`;
+    let url = `https://inventory-management-app-g7yl.onrender.com/api/products?page=${page}&pageSize=${pageSize}&sort=${sort}&order=${order}`;
     if (selectedCategory) url += `&category=${encodeURIComponent(selectedCategory)}`;
     fetch(url)
       .then(res => res.json())
@@ -308,7 +308,7 @@ export default function ProductManager() {
   }, [selectedCategory, page, pageSize, sort, order]);
 
   const refreshProducts = () => {
-    let url = `http://localhost:5001/api/products?page=${page}&pageSize=${pageSize}&sort=${sort}&order=${order}`;
+    let url = `https://inventory-management-app-g7yl.onrender.com/api/products?page=${page}&pageSize=${pageSize}&sort=${sort}&order=${order}`;
     if (selectedCategory) url += `&category=${encodeURIComponent(selectedCategory)}`;
     fetch(url)
       .then(res => res.json())
@@ -317,7 +317,7 @@ export default function ProductManager() {
 
   const handleDelete = (id) => {
     if (window.confirm('Delete this product?')) {
-      fetch(`http://localhost:5001/api/products/${id}`, { method: 'DELETE' })
+      fetch(`https://inventory-management-app-g7yl.onrender.com/api/products/${id}`, { method: 'DELETE' })
         .then(res => res.json())
         .then(() => {
           setEditing(null);
@@ -327,7 +327,7 @@ export default function ProductManager() {
   };
 
   function handleExportCSV() {
-    window.open('http://localhost:5001/api/products/export', '_blank');
+    window.open('https://inventory-management-app-g7yl.onrender.com/api/products/export', '_blank');
   }
 
   function handleImportCSV(event) {
@@ -336,7 +336,7 @@ export default function ProductManager() {
     const formData = new FormData();
     formData.append('csvFile', file);
 
-    fetch('http://localhost:5001/api/products/import', {
+    fetch('https://inventory-management-app-g7yl.onrender.com/api/products/import', {
       method: 'POST',
       body: formData
     })
