@@ -118,24 +118,29 @@ function AddProductForm({ onAdd }) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(form)
     })
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) {
-          setMessage('Product added!');
-          setForm({
-            name: '',
-            unit: '',
-            category: '',
-            brand: '',
-            stock: '',
-            status: '',
-            image: ''
-          });
-          onAdd();
-        } else {
-          setMessage(data.error || 'Failed to add.');
-        }
-      })
+      .then(async res => {
+  let data;
+  try {
+    data = await res.json();
+  } catch {
+    setMessage('Server returned an invalid response.');
+    return;
+  }
+
+  // Debug output:
+  console.log('Server response:', data);
+
+  if (res.ok && data.success) {
+    setMessage('Product added!');
+    setForm({ name: '', unit: '', category: '', brand: '', stock: '', status: '', image: '' });
+    onAdd();
+  } else if (data.error) {
+    setMessage(data.error);
+  } else {
+    setMessage('Failed to add: ' + JSON.stringify(data));
+  }
+})
+
       .catch(() => setMessage('Server error.'));
   };
 
