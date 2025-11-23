@@ -3,7 +3,6 @@ const multer = require('multer');
 const csv = require('csv-parser');
 const fs = require('fs');
 const upload = multer({ dest: 'uploads/' });
-const serverless = require("serverless-http");
 
 
 require('dotenv').config();
@@ -251,5 +250,6 @@ app.get('/api/products', (req, res) => {
 });
 
 // FINAL LINE: Start the server
-module.exports = serverless(app);
-
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
+});
