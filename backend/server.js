@@ -4,11 +4,12 @@ const csv = require('csv-parser');
 const fs = require('fs');
 const upload = multer({ dest: 'uploads/' });
 
-
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const sqlite3 = require('sqlite3').verbose();
+app.use(express.json());
+
 
 const app = express();
 const PORT = process.env.PORT || 5001;
