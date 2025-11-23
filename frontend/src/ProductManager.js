@@ -113,34 +113,31 @@ function AddProductForm({ onAdd }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    fetch('https://inventory-management-app-g7yl.onrender.com/api/products', {
+    const submitForm = { ...form, stock: Number(form.stock) };
+    fetch('http://localhost:5001/api/products', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(form)
+      body: JSON.stringify(submitForm)
     })
-      .then(async res => {
-  let data;
-  try {
-    data = await res.json();
-  } catch {
-    setMessage('Server returned an invalid response.');
-    return;
-  }
-
-  // Debug output:
-  console.log('Server response:', data);
-
-  if (res.ok && data.success) {
-    setMessage('Product added!');
-    setForm({ name: '', unit: '', category: '', brand: '', stock: '', status: '', image: '' });
-    onAdd();
-  } else if (data.error) {
-    setMessage(data.error);
-  } else {
-    setMessage('Failed to add: ' + JSON.stringify(data));
-  }
-})
-
+      .then(async (res) => {
+        let data = {};
+        try { data = await res.json(); } catch {}
+        if (res.ok && data.success) {
+          setMessage('Product added!');
+          setForm({
+            name: '',
+            unit: '',
+            category: '',
+            brand: '',
+            stock: '',
+            status: '',
+            image: ''
+          });
+          onAdd();
+        } else {
+          setMessage(data.error || 'Failed to add.');
+        }
+      })
       .catch(() => setMessage('Server error.'));
   };
 
